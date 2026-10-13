@@ -9,6 +9,7 @@ A research assistant that runs **entirely on your own machine**. Ask a question,
 - 🧠 **Local LLM with tool calling** (Qwen3 by default; swap in any tool-capable Ollama model)
 - 📝 **Cited answers**: every summary ends with a Sources list
 - 💾 **Auto-saved reports**: each answer is written to a timestamped Markdown file in `reports/`
+- - 🧠 **Conversation memory**: ask follow-up questions; type `new` to start a fresh conversation
 
 ## How it works
 
@@ -77,6 +78,8 @@ Research question (or 'quit'): What are the main differences between LoRA and fu
 
 Type `quit` (or press Enter on an empty line) to exit. Local models are slower than cloud ones, so expect a minute or two per question.
 
+Type a research question at the prompt. Ask follow-ups like "go deeper on the second point" and the agent remembers the conversation (the last 5 exchanges). Type `new` to clear its memory, and `quit` (or press Enter on an empty line) to exit.
+
 ## Configuration
 
 Edit the constants at the top of `agent.py`:
@@ -87,6 +90,7 @@ Edit the constants at the top of `agent.py`:
 | `REPORTS_DIR` | `reports` | Where Markdown reports are saved. |
 | `num_ctx` | `8192` | Context window size. Raise it if you have the memory. |
 | `max_steps` | `10` | Maximum tool-use steps per question. |
+| `MAX_HISTORY_TURNS` | `5` | How many past question/answer pairs the agent remembers. |
 
 ## Project structure
 
@@ -120,7 +124,7 @@ local-research-agent/
 
 - [x] Web search and page reading tools
 - [x] Save reports as Markdown
-- [ ] Conversation memory for follow-up questions
+- [x] Conversation memory for follow-up questions
 - [ ] PDF and arXiv paper reading
 - [ ] Verification step that cross-checks claims against a second source
 - [ ] Domain-specific modes (e.g. AI papers, news, finance)
