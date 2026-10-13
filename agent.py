@@ -7,7 +7,7 @@ import requests
 from bs4 import BeautifulSoup
 from ddgs import DDGS
 
-MODEL = "qwen3:8b"   # match whatever `ollama list` shows
+MODEL = "qwen3:4b"   # match whatever `ollama list` shows
 REPORTS_DIR = Path("reports")
 MAX_HISTORY_TURNS = 5   # how many past question/answer pairs to remember
 
@@ -33,7 +33,7 @@ def read_webpage(url: str) -> str:
     for tag in soup(["script", "style", "nav", "footer", "header"]):
         tag.decompose()
     text = " ".join(soup.get_text(separator=" ").split())
-    return text[:4000]
+    return text[:25 00]
 
 TOOLS = {"web_search": web_search, "read_webpage": read_webpage}
 
@@ -74,6 +74,7 @@ def run_agent(question: str, history: list, max_steps: int = 10) -> str:
             messages=messages,
             tools=list(TOOLS.values()),
             options={"num_ctx": 8192},
+            think=False,
         )
         msg = response.message
         messages.append(msg)
