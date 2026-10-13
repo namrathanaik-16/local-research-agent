@@ -86,7 +86,7 @@ Edit the constants at the top of `agent.py`:
 
 | Setting | Default | Description |
 |---|---|---|
-| `MODEL` | `qwen3:8b` | Any Ollama model that supports tool calling. Run `ollama list` to see what you have. |
+| `MODEL` | `qwen3:4b` | Any Ollama model that supports tool calling. Run `ollama list` to see what you have. |
 | `REPORTS_DIR` | `reports` | Where Markdown reports are saved. |
 | `num_ctx` | `8192` | Context window size. Raise it if you have the memory. |
 | `max_steps` | `10` | Maximum tool-use steps per question. |
