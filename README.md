@@ -9,7 +9,7 @@ A research assistant that runs **entirely on your own machine**. Ask a question,
 - 🧠 **Local LLM with tool calling** (Qwen3 by default; swap in any tool-capable Ollama model)
 - 📝 **Cited answers**: every summary ends with a Sources list
 - 💾 **Auto-saved reports**: each answer is written to a timestamped Markdown file in `reports/`
-- - 🧠 **Conversation memory**: ask follow-up questions; type `new` to start a fresh conversation
+- 🧠 **Conversation memory**: ask follow-up questions; type `new` to start a fresh conversation
 
 ## How it works
 
