@@ -10,6 +10,7 @@ A research assistant that runs **entirely on your own machine**. Ask a question,
 - 📝 **Cited answers**: every summary ends with a Sources list
 - 💾 **Auto-saved reports**: each answer is written to a timestamped Markdown file in `reports/`
 - 🧠 **Conversation memory**: ask follow-up questions; type `new` to start a fresh conversation
+- 📚 **arXiv and PDF support**: search arXiv, then read papers and PDFs section by section
 
 ## How it works
 
@@ -19,8 +20,12 @@ flowchart LR
     B -->|needs info| C{Tool call}
     C --> D[web_search]
     C --> E[read_webpage]
+    C --> H[search_arxiv]
+    C --> I[read_pdf]
     D --> B
     E --> B
+    H --> B
+    I --> B
     B -->|enough info| F[Cited summary]
     F --> G[reports/*.md]
 ```
@@ -91,6 +96,7 @@ Edit the constants at the top of `agent.py`:
 | `num_ctx` | `8192` | Context window size. Raise it if you have the memory. |
 | `max_steps` | `10` | Maximum tool-use steps per question. |
 | `MAX_HISTORY_TURNS` | `5` | How many past question/answer pairs the agent remembers. |
+| `CHUNK_CHARS` | `4000` | How much text the model reads per page or PDF part. |
 
 ## Project structure
 
@@ -117,7 +123,8 @@ local-research-agent/
 ## Limitations
 
 - Small local models can misread sources or occasionally skip steps. Always check the cited links for important claims.
-- Page text is truncated to 4,000 characters to fit the context window.
+- Pages and PDFs are read in chunks of about 4,000 characters, and PDFs are capped at the first 40 pages.
+- Scanned (image-only) PDFs can't be read.
 - JavaScript-heavy sites may return little or no text.
 
 ## Roadmap
@@ -125,7 +132,7 @@ local-research-agent/
 - [x] Web search and page reading tools
 - [x] Save reports as Markdown
 - [x] Conversation memory for follow-up questions
-- [ ] PDF and arXiv paper reading
+- [x] PDF and arXiv paper reading
 - [ ] Verification step that cross-checks claims against a second source
 - [ ] Domain-specific modes (e.g. AI papers, news, finance)
 
