@@ -12,6 +12,7 @@ A research assistant that runs **entirely on your own machine**. Ask a question,
 - 🧠 **Conversation memory**: ask follow-up questions; type `new` to start a fresh conversation
 - 📚 **arXiv and PDF support**: search arXiv, then read papers and PDFs section by section
 - ✅ **Optional fact-checking**: type `verify` after an answer to cross-check its key claims against other sources
+- 🎯 **Domain modes**: switch between general, AI papers, news and finance, each with its own tools, prompt and report forma
 
 ## How it works
 
@@ -23,10 +24,12 @@ flowchart LR
     C --> E[read_webpage]
     C --> H[search_arxiv]
     C --> I[read_pdf]
+    C --> J[news_search]
     D --> B
     E --> B
     H --> B
     I --> B
+    J --> B
     B -->|enough info| F[Cited summary]
     F --> G[reports/*.md]
 ```
@@ -81,10 +84,22 @@ Research question (or 'quit'): What are the main differences between LoRA and fu
   ...
 [Saved to reports\2026-10-13_14-30_what-are-the-main-differences-between-lora.md]
 ```
+### Modes
+
+| Command | Focus |
+|---|---|
+| `mode general` | General web research (default) |
+| `mode ai-papers` | Finds and reads arXiv papers; summarizes as Problem / Method / Results / Limitations |
+| `mode news` | Recent articles from multiple outlets, with dates and sources |
+| `mode finance` | Filings, results and news with a source for every figure (information only, not financial advice) |
+
+Type `mode` on its own to list them. The active mode appears in the prompt.
 
 Type `quit` (or press Enter on an empty line) to exit. Local models are slower than cloud ones, so expect a minute or two per question.
 
 Type a research question at the prompt. Ask follow-ups like "go deeper on the second point" and the agent remembers the conversation (the last 5 exchanges). Type `verify` to fact-check the last answer against independent sources, `new` to clear memory, and `quit` (or press Enter on an empty line) to exit.
+
+
 
 ## Configuration
 
@@ -129,6 +144,8 @@ local-research-agent/
 - Scanned (image-only) PDFs can't be read.
 - JavaScript-heavy sites may return little or no text.
 - Verification uses short search snippets from other sources, so treat it as a sanity check rather than proof.
+- Finance mode is for information only and is not financial advice. Verify figures against original filings.
+- News coverage depends on DuckDuckGo's news index and varies by topic and region.
 
 ## Roadmap
 
@@ -137,7 +154,8 @@ local-research-agent/
 - [x] Conversation memory for follow-up questions
 - [x] PDF and arXiv paper reading
 - [x] Verification step that cross-checks claims against a second source
-- [ ] Domain-specific modes (e.g. AI papers, news, finance)
+- [x] Domain-specific modes (e.g. AI papers, news, finance)
+- [ ] Simple web interface(Streamlit)
 
 ## License
 
