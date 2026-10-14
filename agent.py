@@ -13,7 +13,7 @@ from pypdf import PdfReader
 MODEL = "qwen3:4b"
 REPORTS_DIR = Path("reports")
 MAX_HISTORY_TURNS = 5
-CHUNK_CHARS = 4000
+CHUNK_CHARS = 2500
 HEADERS = {"User-Agent":"Mozilla/5.0"}
 
 ARVIX_ID = re.compile(r"(\d{4}\.\d{4,5})(v\d+)?")
@@ -143,6 +143,12 @@ def save_report(question: str, answer: str) -> Path:
     path.write_text(content, encoding="utf-8")
     return path
 
+def strip_thinking(text:str)-> str:
+    """Remove any leaked <think> reasoning from the model's reply."""
+    if"</think>" in text:
+        text = text.split("</think")[-1]
+    return text.strip()
+
 def run_agent(question: str, history: list, max_steps: int = 10) -> str:
     """Answer one question. `history` holds earlier question/answer pairs only."""
     messages = (
@@ -162,7 +168,7 @@ def run_agent(question: str, history: list, max_steps: int = 10) -> str:
         msg = response.message
         messages.append(msg)
         if not msg.tool_calls:
-            return msg.content
+            return strip_thinking(msg.content)
         for call in msg.tool_calls:
             name, args = call.function.name, call.function.arguments
             print(f"  -> using {name}({args})")
