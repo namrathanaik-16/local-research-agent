@@ -1,84 +1,77 @@
-import io 
+import io
 import re
-import xml.etree.ElementTree as ET 
+import xml.etree.ElementTree as ET
 from datetime import datetime
-from pathlib import Path 
+from pathlib import Path
 
 import ollama
 import requests
 from bs4 import BeautifulSoup
-from ddgs import DDGS 
+from ddgs import DDGS
 from pypdf import PdfReader
 
-MODEL = "qwen3:4b"
+MODEL = "qwen3:8b"   # match whatever `ollama list` shows
 REPORTS_DIR = Path("reports")
-MAX_HISTORY_TURNS = 5
-CHUNK_CHARS = 2500
-HEADERS = {"User-Agent":"Mozilla/5.0"}
+MAX_HISTORY_TURNS = 5   # how many past question/answer pairs to remember
+CHUNK_CHARS = 4000      # how much text the model sees per read
+MAX_CLAIMS = 3          # how many claims to check when verifying
+HEADERS = {"User-Agent": "Mozilla/5.0"}
 
-ARVIX_ID = re.compile(r"(\d{4}\.\d{4,5})(v\d+)?")
+ARXIV_ID = re.compile(r"(\d{4}\.\d{4,5})(v\d+)?")
 
-def web_search(query:str)->str:
-    """Search the web and return the top results with title, URLs and short snippets.
-    
+def web_search(query: str) -> str:
+    """Search the web and return the top results with titles, URLs and short snippets.
+
     Args:
-        query:The search query.
+        query: The search query.
     """
-    results= DDGS().text(query, max_results=5)
+    results = DDGS().text(query, max_results=5)
     if not results:
-        return "No results found"
+        return "No results found."
     return "\n\n".join(f"{r['title']}\n{r['href']}\n{r['body']}" for r in results)
 
-def search_arxiv(query:str)->str:
-    """Search arVix for research papers. Return titles, authors, arXiv IDs and abstracts.
+def search_arxiv(query: str) -> str:
+    """Search arXiv for research papers. Returns titles, authors, arXiv IDs and abstracts.
+
     Args:
-        query:Keywords describing the paper to find.
+        query: Keywords describing the papers to find.
     """
     resp = requests.get(
         "https://export.arxiv.org/api/query",
-        params = {"search_query":f"all:{query}","max_results":5, "sortBy":"relevance"},
-        headers= HEADERS,
+        params={"search_query": f"all:{query}", "max_results": 5, "sortBy": "relevance"},
+        headers=HEADERS,
         timeout=20,
     )
     root = ET.fromstring(resp.text)
-    ns = {"a":"http://www.w3.org/2005/Atom"}
-    entries = root.findall("a:entry",ns)
+    ns = {"a": "http://www.w3.org/2005/Atom"}
+    entries = root.findall("a:entry", ns)
     if not entries:
-        return "No papers found"
+        return "No papers found."
     out = []
     for e in entries:
-        title=" ".join(e.findtext("a:title","",ns).split())
-        abstract=" ".join(e.findtext("a:summary","",ns).split())[:500]
-        authors=" ".join(e.findtext("a:name","",ns)for a in e.findall("a:author",ns)[:4])
-        url=e.findtext("a:id","",ns)
-        year=e.findtext("a:published","",ns)[:4]
-        out.append(f"{title}({year})\nAuthors:{authors}\nURL:{url}\nAbstract:{abstract}")
+        title = " ".join(e.findtext("a:title", "", ns).split())
+        abstract = " ".join(e.findtext("a:summary", "", ns).split())[:500]
+        authors = ", ".join(a.findtext("a:name", "", ns) for a in e.findall("a:author", ns)[:4])
+        url = e.findtext("a:id", "", ns)
+        year = e.findtext("a:published", "", ns)[:4]
+        out.append(f"{title} ({year})\nAuthors: {authors}\nURL: {url}\nAbstract: {abstract}")
     return "\n\n".join(out)
 
-def _to_pdf_url(source:str)->str:
-    """Turn an arXiv ID or arXiv.org link into a direct PDF URL; leave other URLs alone."""
-    source=source.strip()
-    is_arxiv="arxiv.org" in source or ARXIV_ID.fullmatch(source)
+def _to_pdf_url(source: str) -> str:
+    """Turn an arXiv ID or arxiv.org link into a direct PDF URL; leave other URLs alone."""
+    source = source.strip()
+    is_arxiv = "arxiv.org" in source or ARXIV_ID.fullmatch(source)
     match = ARXIV_ID.search(source)
     if is_arxiv and match:
         return f"https://arxiv.org/pdf/{match.group(1)}{match.group(2) or ''}"
     return source
 
-def read_pdf(source:str, part:int=1)->str:
-    """Read a research paper or PDF. Accepts an arXiv ID (like 1706.03762), an arxiv.org link, or a different PDF URL.
-    Long documents are split into parts; call again with part=2, part=3, and so on to read further.
-    
-    Args:
-        source:An arXiv ID, arxiv.org link, or PDF URL.
-        part:Which chunk of the document to return, starting at 1.
-    """
-    text = _pdf_text(_to_pdf_url(source))
-    if not text:
-        return "Could not extract text(the PDF may be scanned images.)"
-    total = max(1,-(-len(text)//CHUNK_CHARS))
-    part = max(1,min(part,total))
-    start = (part-1)*CHUNK_CHARS
-    return f"[Part{part} of {total}]\n{text[start:start + CHUNK_CHARS]}"
+def _pdf_text(url: str) -> str:
+    resp = requests.get(url, headers=HEADERS, timeout=30)
+    resp.raise_for_status()
+    reader = PdfReader(io.BytesIO(resp.content))
+    pages = [(page.extract_text() or "") for page in reader.pages[:40]]  # cap at 40 pages
+    return " ".join(" ".join(pages).split())
 
 def read_pdf(source: str, part: int = 1) -> str:
     """Read a research paper or PDF. Accepts an arXiv ID (like 1706.03762), an arxiv.org link, or a direct PDF URL.
@@ -143,11 +136,89 @@ def save_report(question: str, answer: str) -> Path:
     path.write_text(content, encoding="utf-8")
     return path
 
-def strip_thinking(text:str)-> str:
+def strip_thinking(text: str) -> str:
     """Remove any leaked <think> reasoning from the model's reply."""
-    if"</think>" in text:
-        text = text.split("</think")[-1]
+    if "</think>" in text:
+        text = text.split("</think>")[-1]
     return text.strip()
+
+# ---------- Verification ----------
+
+def ask_model(prompt: str) -> str:
+    """One plain model call with no tools."""
+    response = ollama.chat(
+        model=MODEL,
+        messages=[{"role": "user", "content": prompt}],
+        options={"num_ctx": 8192},
+        think=False,
+    )
+    return strip_thinking(response.message.content)
+
+def extract_claims(answer: str) -> list:
+    """Ask the model for the key factual claims in an answer."""
+    prompt = (
+        f"Here is a research answer:\n\n{answer}\n\n"
+        f"List the {MAX_CLAIMS} most important factual claims it makes. "
+        "Each claim must be one short, self-contained sentence that names its subject "
+        "(no pronouns like 'it' or 'this'). Output one claim per line and nothing else."
+    )
+    lines = ask_model(prompt).splitlines()
+    claims = []
+    for line in lines:
+        line = re.sub(r"^\s*(?:[-*\u2022]|\d+[.)])\s*", "", line).strip()
+        if len(line) > 15:
+            claims.append(line)
+    return claims[:MAX_CLAIMS]
+
+def check_claim(claim: str, cited_urls: set) -> tuple:
+    """Search for independent evidence on one claim. Returns (verdict, reason, url)."""
+    results = DDGS().text(claim[:120], max_results=6) or []
+    # a "second source" must not be one the answer already used
+    fresh = [r for r in results if r["href"].rstrip("/") not in cited_urls][:4]
+    if not fresh:
+        return "UNCLEAR", "No independent source found.", ""
+    evidence = "\n\n".join(f"[{i + 1}] {r['href']}\n{r['body']}" for i, r in enumerate(fresh))
+    prompt = (
+        f"Claim: {claim}\n\nEvidence from other sources:\n{evidence}\n\n"
+        "Do these sources support the claim? Answer in exactly this format:\n"
+        "VERDICT: SUPPORTED or CONTRADICTED or UNCLEAR\n"
+        "SOURCE: the number of the most relevant source, or 0 if none\n"
+        "REASON: one short sentence"
+    )
+    reply = ask_model(prompt)
+    verdict = re.search(r"VERDICT:\s*(SUPPORTED|CONTRADICTED|UNCLEAR)", reply, re.I)
+    source = re.search(r"SOURCE:\s*(\d+)", reply)
+    reason = re.search(r"REASON:\s*(.+)", reply)
+    verdict = verdict.group(1).upper() if verdict else "UNCLEAR"
+    idx = int(source.group(1)) if source else 0
+    url = fresh[idx - 1]["href"] if 1 <= idx <= len(fresh) else ""
+    return verdict, (reason.group(1).strip() if reason else "No clear reason given."), url
+
+def verify_answer(answer: str) -> str:
+    """Check the key claims of an answer against independent sources."""
+    cited = {u.rstrip("/").rstrip(").,") for u in re.findall(r"https?://[^\s)\]]+", answer)}
+    claims = extract_claims(answer)
+    if not claims:
+        return "Could not extract claims to verify."
+    labels = {
+        "SUPPORTED": "\u2705 Confirmed by another source",
+        "UNCLEAR": "\u26a0\ufe0f Not confirmed (unclear or no other source)",
+        "CONTRADICTED": "\u274c Other sources disagree",
+    }
+    lines = []
+    for claim in claims:
+        print(f"  -> checking: {claim}")
+        try:
+            verdict, reason, url = check_claim(claim, cited)
+        except Exception as e:
+            verdict, reason, url = "UNCLEAR", f"Check failed: {e}", ""
+        entry = f"- **{claim}**\n  {labels[verdict]}. {reason}"
+        if url:
+            entry += f"\n  Source: {url}"
+        lines.append(entry)
+    return "\n\n".join(lines)
+
+# ---------- Agent loop ----------
 
 def run_agent(question: str, history: list, max_steps: int = 10) -> str:
     """Answer one question. `history` holds earlier question/answer pairs only."""
@@ -180,15 +251,28 @@ def run_agent(question: str, history: list, max_steps: int = 10) -> str:
     return "Stopped after too many steps."
 
 if __name__ == "__main__":
-    history = []   # remembered question/answer pairs
-    print("Type 'new' to start a fresh conversation, 'quit' to exit.")
+    history = []        # remembered question/answer pairs
+    last_answer = None  # most recent answer, for 'verify'
+    last_path = None    # its saved report file
+    print("Commands: 'verify' checks the last answer, 'new' starts fresh, 'quit' exits.")
     while True:
-        q = input("\nResearch question (or 'new' / 'quit'): ").strip()
+        q = input("\nResearch question (or 'verify' / 'new' / 'quit'): ").strip()
         if q.lower() in ("quit", "exit", ""):
             break
         if q.lower() == "new":
-            history = []
+            history, last_answer, last_path = [], None, None
             print("[Memory cleared. Starting a new conversation.]")
+            continue
+        if q.lower() == "verify":
+            if not last_answer:
+                print("[Nothing to verify yet. Ask a question first.]")
+                continue
+            print("  Verifying key claims against other sources...")
+            report = verify_answer(last_answer)
+            print("\n--- Verification ---\n" + report)
+            with open(last_path, "a", encoding="utf-8") as f:
+                f.write("\n\n## Verification\n\n" + report + "\n")
+            print(f"\n[Added to {last_path}]")
             continue
         answer = run_agent(q, history)
         print("\n" + answer)
@@ -196,5 +280,7 @@ if __name__ == "__main__":
             history.append({"role": "user", "content": q})
             history.append({"role": "assistant", "content": answer})
             history = history[-MAX_HISTORY_TURNS * 2:]
-            path = save_report(q, answer)
-            print(f"\n[Saved to {path}]")
+            last_answer = answer
+            last_path = save_report(q, answer)
+            print(f"\n[Saved to {last_path}]")
+            print("[Type 'verify' to fact-check this answer.]")
