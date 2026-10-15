@@ -12,7 +12,8 @@ A research assistant that runs **entirely on your own machine**. Ask a question,
 - 🧠 **Conversation memory**: ask follow-up questions; type `new` to start a fresh conversation
 - 📚 **arXiv and PDF support**: search arXiv, then read papers and PDFs section by section
 - ✅ **Optional fact-checking**: type `verify` after an answer to cross-check its key claims against other sources
-- 🎯 **Domain modes**: switch between general, AI papers, news and finance, each with its own tools, prompt and report forma
+- 🎯 **Domain modes**: switch between general, AI papers, news and finance, each with its own tools, prompt and report format.
+- 🖥️ **Web interface**: a Streamlit chat page with a mode selector, Verify buttons and a report browser
 
 ## How it works
 
@@ -95,6 +96,14 @@ Research question (or 'quit'): What are the main differences between LoRA and fu
 
 Type `mode` on its own to list them. The active mode appears in the prompt.
 
+### Web interface
+
+```bash
+streamlit run app.py
+```
+
+Opens a chat page at `http://localhost:8501`. Pick a mode in the sidebar, ask questions, click **Verify** under any answer to fact-check it, and open past reports from the sidebar. Run it from the project folder. The terminal version (`python agent.py`) still works.
+
 Type `quit` (or press Enter on an empty line) to exit. Local models are slower than cloud ones, so expect a minute or two per question.
 
 Type a research question at the prompt. Ask follow-ups like "go deeper on the second point" and the agent remembers the conversation (the last 5 exchanges). Type `verify` to fact-check the last answer against independent sources, `new` to clear memory, and `quit` (or press Enter on an empty line) to exit.
@@ -119,7 +128,8 @@ Edit the constants at the top of `agent.py`:
 
 ```
 local-research-agent/
-├── agent.py            # the agent: tools, loop, report saving
+├── agent.py
+├── app.py              # Streamlit web interface         # the agent: tools, loop, report saving
 ├── requirements.txt    # Python dependencies
 ├── reports/            # generated reports (ignored by git)
 ├── README.md
@@ -155,7 +165,7 @@ local-research-agent/
 - [x] PDF and arXiv paper reading
 - [x] Verification step that cross-checks claims against a second source
 - [x] Domain-specific modes (e.g. AI papers, news, finance)
-- [ ] Simple web interface(Streamlit)
+- [x] Simple web interface(Streamlit)
 
 ## License
 
