@@ -2,6 +2,8 @@
 
 A research assistant that runs **entirely on your own machine**. Ask a question, and the agent searches the web, reads the most relevant pages, and writes a cited summary, using an open-source LLM served locally by [Ollama](https://ollama.com). No API keys, no cloud LLM, no data leaving your laptop (apart from the web searches themselves).
 
+![Web interface screenshot](screenshot.png)
+
 ## Features
 
 - 🔎 **Web search** via DuckDuckGo (no API key needed)
@@ -132,6 +134,7 @@ local-research-agent/
 ├── app.py              # Streamlit web interface         # the agent: tools, loop, report saving
 ├── requirements.txt    # Python dependencies
 ├── reports/            # generated reports (ignored by git)
+├── screenshot.png      # web interface screenshot
 ├── README.md
 ├── LICENSE
 └── .gitignore
